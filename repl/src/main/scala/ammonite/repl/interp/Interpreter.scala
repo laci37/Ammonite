@@ -1,6 +1,7 @@
 package ammonite.repl.interp
 
 import java.io.File
+import java.nio.file.Files
 import acyclic.file
 import ammonite.pprint
 import ammonite.repl._
@@ -96,6 +97,14 @@ class Interpreter(handleResult: => Res[Evaluated] => Unit,
         IvyThing.resolveArtifact(groupId, artifactId, version, if (verbose) 2 else 1)
                 .map(handleJar)
         init()
+      }
+      def script(file: File){
+        val content = Files.readAllBytes(file.toPath)
+        apply(new String(content))
+      }
+
+      def script(path: String){
+        script(new File(path))
       }
     }
     implicit var pprintConfig = interp.pprintConfig

@@ -103,6 +103,16 @@ trait Load extends (String => Unit){
    * evaluates them one after another
    */
   def apply(line: String): Unit
+
+  /**
+   * Loads a script file into the REPL
+   */
+  def script(file: java.io.File): Unit
+
+  /**
+   * Loads a script file with specified path int the REPL
+   */
+  def script(path: String): Unit
 }
 
 // End of ReplAPI
