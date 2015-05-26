@@ -19,7 +19,7 @@ trait JLineFrontend{
    * The width of the terminal
    */
   def width: Int
-  def action(): Res[Seq[String]]
+  def action(): Res[Seq[Seq[String]]]
   def update(r: Res[Evaluated]): Unit
 }
 object JLineFrontend{
