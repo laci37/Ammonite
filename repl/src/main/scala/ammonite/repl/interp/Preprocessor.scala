@@ -52,7 +52,7 @@ object Preprocessor{
     val TypeDef = DefProc("type"){ case m: G#TypeDef => m.name }
 
     val PatVarDef = Processor { case (name, code, t: G#ValDef) =>
-      //Function to RHS expressions into anonymous functions so they will be JITed
+      //Function to lift RHS expressions into anonymous functions so they will be JITed
       def wrap(code: String) = {
         val (lhs, rhs) = Parsers.patVarSplit(code)
         //Rebuilding definition from parsed data to lift rhs to anon function
