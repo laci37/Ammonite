@@ -79,7 +79,7 @@ object JLineFrontend{
             .toVector
 
 
-    def action(): Res[Seq[String]] = for {
+    def action(): Res[Seq[Seq[String]]] = for {
       _ <- Catching{ case e: jline.console.UserInterruptException =>
         if (e.getPartialLine == "") reader.println("Ctrl-D to exit")
         Res.Skip
@@ -87,7 +87,7 @@ object JLineFrontend{
       res <- readCode("")
     } yield res
 
-    @tailrec def readCode(buffered: String): Res[Seq[String]] = {
+    @tailrec def readCode(buffered: String): Res[Seq[Seq[String]]] = {
       Option(reader.readLine(
         if (buffered.isEmpty) shellPrompt + " "
         // Strip ANSI color codes, as described http://stackoverflow.com/a/14652763/871202

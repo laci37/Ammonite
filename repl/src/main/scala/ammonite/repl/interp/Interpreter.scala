@@ -28,14 +28,15 @@ class Interpreter(handleResult: => Res[Evaluated] => Unit,
 
   val history = initialHistory.to[collection.mutable.Buffer]
 
-  def processLine(stmts: Seq[String],
+  def processLine(stmts: Seq[Seq[String]],
                   saveHistory: (String => Unit, String) => Unit,
                   printer: Iterator[String] => Unit) = for{
     _ <- Catching { case Ex(x@_*) =>
       val Res.Failure(trace) = Res.Failure(x)
       Res.Failure(trace + "\nSomething unexpected went wrong =(")
     }
-    Preprocessor.Output(code, printSnippet) <- preprocess(stmts, eval.getCurrentLine)
+    blocks <- preprocess(stmts, eval.getCurrentLine)
+    Preprocessor.Output(code, printSnippet) <- blocks
     _ = saveHistory(history.append(_), stmts.mkString("; "))
     oldClassloader = Thread.currentThread().getContextClassLoader
     out <- try{

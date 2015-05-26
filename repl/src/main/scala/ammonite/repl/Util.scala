@@ -164,7 +164,8 @@ object Parsers {
   }
 
   val Prelude = P( Annot.rep ~ `implicit`.? ~ `lazy`.? ~ LocalMod.rep )
-  val Splitter = P( Semis.? ~ (scalaparse.Scala.Import | Prelude ~ BlockDef | StatCtx.Expr).!.rep(sep=Semis) ~ Semis.? ~ WL ~ End)
+  val CompilationUnit = P( Semis.? ~ (scalaparse.Scala.Import | Prelude ~ BlockDef | StatCtx.Expr).!.rep(sep=Semis) ~ Semis.? ~ WL )
+  val Splitter = P( CompilationUnit.rep(1,"\n@") ~ End)
   def split(code: String) = {
     Splitter.parse(code) match{
       case Result.Success(value, idx) => value

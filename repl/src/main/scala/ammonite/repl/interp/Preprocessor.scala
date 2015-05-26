@@ -11,7 +11,7 @@ import scala.tools.nsc.{Global => G}
  * three things:
  */
 trait Preprocessor{
-  def apply(stmts: Seq[String], wrapperId: String): Res[Preprocessor.Output]
+  def apply(stmts: Seq[Seq[String]], wrapperId: String): Res[Preprocessor.Output]
 }
 object Preprocessor{
 
@@ -91,18 +91,27 @@ object Preprocessor{
       ObjectDef, ClassDef, TraitDef, DefDef, TypeDef, PatVarDef, Import, Expr
     )
 
-    def apply(stmts: Seq[String], wrapperId: String): Res[Preprocessor.Output] = {
-      val unwrapped = stmts.flatMap{x => Parsers.unwrapBlock(x) match {
-        case Some(contents) => Parsers.split(contents)
-        case None => Seq(x)
-      }}
-      unwrapped match{
-        case Nil => Res.Skip
+    def apply(stmts: Seq[Seq[String]], wrapperId: String): Res[Seq[Preprocessor.Output]] = {
+      val unwrapped = stmts map { compUnit => 
+        compUnit.flatMap { x => 
+          Parsers.unwrapBlock(x) match {
+            case Some(contents) => Parsers.split(contents)
+            case None => Seq(Seq(x))
+          }
+        }.flatten
+      }
+      val results = unwrapped.collect{
         case postSplit => complete(stmts.mkString, wrapperId, postSplit.map(_.trim))
+      }
+      if(results.isEmpty) Res.Skip
+      else{
+        val errs=results.collect{ case Res.Failure(err) => err } 
+        if(!errs.isEmpty) Res.Failure(errs.mkString("\n"))
+        else Res.Success(results map { case Res.Success(o) => o })
       }
     }
     
-    def complete(code: String, wrapperId: String, postSplit: Seq[String]) = {
+    def complete(code: String, wrapperId: String, postSplit: Seq[String]): Res[Preprocessor.Output] = {
       val reParsed = postSplit.map(p => (parse(p), p))
       val errors = reParsed.collect{case (Left(e), _) => e }
       if (errors.length != 0) Res.Failure(errors.mkString("\n"))
