@@ -30,26 +30,46 @@ class Interpreter(handleResult: => Res[Evaluated] => Unit,
 
   def processLine(stmts: Seq[Seq[String]],
                   saveHistory: (String => Unit, String) => Unit,
-                  printer: Iterator[String] => Unit) = for{
-    _ <- Catching { case Ex(x@_*) =>
+                  printer: Iterator[String] => Unit): Res[Seq[Res[Evaluated]]] = {
+    try{
+      preprocess(stmts, eval.getCurrentLine) map { blocks =>
+        blocks map { blk => 
+          val Preprocessor.Output(code,printSnippet) = blk
+          saveHistory(history.append(_), stmts.mkString("; "))
+          val oldClassloader = Thread.currentThread().getContextClassLoader 
+          try{
+            Thread.currentThread().setContextClassLoader(eval.evalClassloader)
+            eval.processLine(
+              code,
+              s"ReplBridge.shell.Internal.combinePrints(${printSnippet.mkString(", ")})",
+              printer
+            )
+          } finally Thread.currentThread().setContextClassLoader(oldClassloader)
+        }
+      }
+    } catch { case Ex(x@_*) =>
       val Res.Failure(trace) = Res.Failure(x)
       Res.Failure(trace + "\nSomething unexpected went wrong =(")
     }
-    blocks <- preprocess(stmts, eval.getCurrentLine)
-    Preprocessor.Output(code, printSnippet) <- blocks
-    _ = saveHistory(history.append(_), stmts.mkString("; "))
-    oldClassloader = Thread.currentThread().getContextClassLoader
-    out <- try{
-      Thread.currentThread().setContextClassLoader(eval.evalClassloader)
-      eval.processLine(
-        code,
-        s"ReplBridge.shell.Internal.combinePrints(${printSnippet.mkString(", ")})",
-        printer
-      )
-    } finally Thread.currentThread().setContextClassLoader(oldClassloader)
-  } yield out
+  }
 
-  def handleOutput(res: Res[Evaluated]) = {
+  def handleOutput(res: Res[Seq[Res[Evaluated]]]) = {
+    res match{
+      case Res.Skip =>
+        true
+      case Res.Exit =>
+        stdout("Bye!\n")
+        pressy.shutdownPressy()
+        false
+      case Res.Success(evs) =>
+        evs.foldLeft(true){ (continue,ev) => continue && handleOutputSingle(ev) }
+      case Res.Failure(msg) =>
+        stdout(Console.RED + msg + Console.RESET + "\n")
+        true
+    }
+  }
+
+  def handleOutputSingle(res: Res[Evaluated]) = {
     handleResult(res)
 
     res match{
