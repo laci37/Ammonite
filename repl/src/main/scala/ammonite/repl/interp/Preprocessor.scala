@@ -11,7 +11,7 @@ import scala.tools.nsc.{Global => G}
  * three things:
  */
 trait Preprocessor{
-  def apply(stmts: Seq[Seq[String]], wrapperId: String): Res[Preprocessor.Output]
+  def apply(stmts: Seq[Seq[String]], wrapperId: String): Res[Seq[Preprocessor.Output]]
 }
 object Preprocessor{
 
