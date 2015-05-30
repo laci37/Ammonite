@@ -35,7 +35,7 @@ class Interpreter(handleResult: => Res[Evaluated] => Unit,
       preprocess(stmts, eval.getCurrentLine) map { blocks =>
         blocks map { blk => 
           val Preprocessor.Output(code,printSnippet) = blk
-          saveHistory(history.append(_), stmts.mkString("; "))
+          saveHistory(history.append(_), stmts map (_.mkString("; ")) mkString "\n@\n" )
           val oldClassloader = Thread.currentThread().getContextClassLoader 
           try{
             Thread.currentThread().setContextClassLoader(eval.evalClassloader)
