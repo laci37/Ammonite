@@ -1,5 +1,8 @@
 package ammonite.repl.interp
 import acyclic.file
+import ammonite.ops._
+import ammonite.repl.Util
+import java.io.File
 
 /**
  * Loads the jars that make up the classpath of the scala-js-fiddle
@@ -32,4 +35,16 @@ object Classpath {
   val (jarDeps, dirDeps) = files.toVector.filter(_.exists).partition(
     x => x.isFile && !x.getName.endsWith(".so") && !x.getName.endsWith(".jnilib")
   )
+
+  val hash = {
+    def helper(f: Path): Array[Byte] = {
+      if(f.isFile){
+        Util.md5Hash(read.bytes(f))
+      } else {
+        val subHashes = ls(f).map(helper)
+        Util.combineHashes((Util.md5Hash(f.toString.getBytes) +: subHashes) :_*)
+      }
+    }
+    Util.combineHashes(files.map{ f => helper(Path(f)) } :_*)
+  }
 }

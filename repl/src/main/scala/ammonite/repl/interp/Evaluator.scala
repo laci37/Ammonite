@@ -7,7 +7,6 @@ import acyclic.file
 import ammonite.repl.frontend.ReplExit
 import ammonite.repl._
 import java.net.URLClassLoader
-import java.security.MessageDigest
 
 import ammonite.repl.interp.Evaluator.SpecialClassloader
 import Util.{CompileCache, ClassFiles}
@@ -273,11 +272,9 @@ object Evaluator{
    * in imports, so we don't need to pass them explicitly.
    */
   def cacheTag(code: String, imports: Seq[ImportData], classpathHash: Array[Byte]): String = {
-    val bytes = md5Hash(md5Hash(code.getBytes) ++ md5Hash(imports.mkString.getBytes) ++ classpathHash)
+    val bytes = Util.combineHashes(Util.md5Hash(code.getBytes), Util.md5Hash(imports.mkString.getBytes), classpathHash)
     "cache" + bytes.map("%02x".format(_)).mkString //add prefix to make sure it begins with a letter
   }
-
-  def md5Hash(data: Array[Byte]) = MessageDigest.getInstance("MD5").digest(data)
 
   /**
    * Classloader used to implement the jar-downloading
@@ -316,7 +313,7 @@ object Evaluator{
         .getOrElse(super.findClass(name))
     }
     def add(url: URL) = {
-      _classpathHash = md5Hash(_classpathHash ++ jarHash(url))
+      _classpathHash = Util.combineHashes(_classpathHash, jarHash(url))
       addURL(url)
     }
 
@@ -334,7 +331,7 @@ object Evaluator{
       } finally {
         if (is != null) is.close()
       }  
-      md5Hash(baos.toByteArray())
+      Util.md5Hash(baos.toByteArray())
     }
 
     //we don't need to hash in classes from newFileDict, because cache tag depend on 
@@ -342,10 +339,10 @@ object Evaluator{
     private var _classpathHash = {
       val urls = getURLs
       if(!urls.isEmpty){
-        urls.tail.foldLeft(jarHash(urls.head)){ (oldHash,jarURL) =>
-          md5Hash(oldHash ++ jarHash(jarURL))
+        urls.foldLeft(Classpath.hash){ (oldHash,jarURL) =>
+          Util.md5Hash(oldHash ++ jarHash(jarURL))
         }
-      } else md5Hash(Array.empty)
+      } else Classpath.hash
     }
     def classpathHash: Array[Byte] = _classpathHash
   }

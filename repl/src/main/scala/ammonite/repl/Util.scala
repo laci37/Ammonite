@@ -4,6 +4,8 @@ import acyclic.file
 import pprint.{PPrinter, PPrint}
 
 import scala.util.Try
+import scala.collection.mutable
+import java.security.MessageDigest
 
 object Res{
   def apply[T](o: Option[T], errMsg: => String) = o match{
@@ -158,6 +160,12 @@ object Util{
   def transpose[A](xs: List[List[A]]): List[List[A]] = xs.filter(_.nonEmpty) match {
     case Nil    =>  Nil
     case ys: List[List[A]] => ys.map{ _.head }::transpose(ys.map{ _.tail })
+  }
+  def md5Hash(data: Array[Byte]) = MessageDigest.getInstance("MD5").digest(data)
+  def combineHashes(hashes: Array[Byte]*) = {
+    val buffer = mutable.Buffer.empty[Byte]
+    hashes.foreach(buffer ++= _)
+    md5Hash(buffer.toArray)
   }
 }
 
